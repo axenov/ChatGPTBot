@@ -1,3 +1,5 @@
 import os
+import json
 from lambda_function import lambda_handler
-lambda_handler({"body": {"message": {"from": {"is_bot": False}, "chat": {"id": os.environ['TELEGRAM_CHAT_ID']}, "text": "test bot"}}}, {})
+
+lambda_handler({"body":{"message": json.loads(os.environ["TELEGRAM_MESSAGE"].replace("'", '"'))}}, {})
