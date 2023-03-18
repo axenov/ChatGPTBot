@@ -2,9 +2,13 @@ import json
 import os
 import urllib3
 
+OPENAI_KEY = os.environ.get('OPENAI_KEY')
+BOT_ID = os.environ.get('BOT_ID')
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
-SEND_MESSAGE_URL = 'https://api.telegram.org/bot' + TELEGRAM_TOKEN + '/sendMessage'
+FREQUENCY = os.environ.get('FREQUENCY')
+ALLOWED_CHATS = [int(num) for num in os.environ.get('ALLOWED_CHATS').split(',')]
 
+SEND_MESSAGE_URL = 'https://api.telegram.org/bot' + TELEGRAM_TOKEN + '/sendMessage'
 http = urllib3.PoolManager()
 
 class openaiClient:
@@ -35,15 +39,22 @@ class telegramClient:
                                 body=json.dumps(payload), timeout=10)
         print(response.data)
     
-    def should_reply(self):
+    def should_reply(self, message:dict):
         """ The function that decides whether the bot should reply to a message or not
 
         Returns:
-            boot: True of False
+            bool: boolean value
         """
-        return True
+        if "reply_to_message" in message and message["reply_to_message"]["from"]["id"] == BOT_ID:
+            return True
+        return False
     
     def process_message(self, body):
+        """ Process a message of a user and with some probability reply to it
+
+        Args:
+            body (str): a telegram webhook body
+        """
         if (
             "message" in body and
             not body["message"]["from"]["is_bot"]
@@ -56,10 +67,16 @@ class telegramClient:
                 user_message = message["sticker"]["emoji"]
             else:
                return
-            if self.should_reply():
+           
+            chat_id = message["chat"]["id"]
+            message_id=message["message_id"]
+            if chat_id not in ALLOWED_CHATS:
+                return
+            
+            if self.should_reply(message):
                 ## Add here OpenAI call
                 bot_message = user_message
-                self.send_message(bot_message, message["chat"]["id"], message["message_id"])
+                self.send_message(bot_message, chat_id, message_id)
 
 
 telegram_client = telegramClient()
