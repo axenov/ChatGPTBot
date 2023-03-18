@@ -38,11 +38,25 @@ def lambda_handler(event, context):
     if "body" in event:
         try:
             body = json.loads(event["body"])
-            if "message" in body and not body["message"]["from"]["is_bot"]:
+            if (
+                "message" in body and
+                not body["message"]["from"]["is_bot"]
+                ):
                 message = body["message"]
-                ## Add here OpenAI call
+                # Extract the message of a user
+                if "text" in body["message"]:
+                    user_message = message["text"]
+                elif "sticker" in body["message"] and "emoji" in body["message"]["sticker"]:
+                    user_message = message["sticker"]["emoji"]
+                else:
+                    return {
+                        'statusCode': 200,
+                        'body': "Message was not sent as the user did not send a text or a sticker"
+                    }
+                
                 if should_reply():
-                    bot_message = message["text"]
+                    ## Add here OpenAI call
+                    bot_message = user_message
                     send_message(bot_message, message["chat"]["id"], message["message_id"])
                     return {
                         'statusCode': 200,
@@ -51,7 +65,7 @@ def lambda_handler(event, context):
         except Exception as e: 
             print(e)
             return {
-                'statusCode': 500,
+                'statusCode': 200,
                 'body': "Error"
             }
     return {
