@@ -30,7 +30,7 @@ class openaiClient:
             messages = messages,
             temperature=1.0,
             top_p=1.0,
-            max_tokens=256,
+            max_tokens=128,
             frequency_penalty=1.0,
             presence_penalty=1.0,
         )
