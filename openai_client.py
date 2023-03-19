@@ -10,15 +10,14 @@ SYSTEM_PROMPT = os.environ.get('SYSTEM_PROMPT')
 ASSYSTANT_PROMPT = os.environ.get('ASSYSTANT_PROMPT')
 CONTEXT_LENGTH = int(os.environ.get('CONTEXT_LENGTH'))
 
-dynamoDB_client = dynamoDBClient()
-
 class openaiClient:
-    def __init__(self) -> None:
+    def __init__(self, dynamoDB_client: dynamoDBClient()) -> None:
         openai.api_key = OPENAI_KEY
+        self.dynamoDB_client = dynamoDB_client
     
     def complete_chat(self, user_message: str, chat_id: int, bot_id: int):
         """ Generate the bot's answer to a user's message"""
-        previous_messages = dynamoDB_client.load_messages(f"{str(chat_id)}_{str(bot_id)}")[-CONTEXT_LENGTH:]
+        previous_messages = self.dynamoDB_client.load_messages(f"{str(chat_id)}_{str(bot_id)}")[-CONTEXT_LENGTH:]
         
         messages = [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "assistant", "content": ASSYSTANT_PROMPT}] + \
             previous_messages + \
@@ -35,5 +34,5 @@ class openaiClient:
         )
         answer = response["choices"][0]["message"]["content"]
         print(answer)
-        dynamoDB_client.save_messages(f"{str(chat_id)}_{str(bot_id)}", previous_messages[-(CONTEXT_LENGTH-1):] + [{"role": "user", "content": user_message}, {"role": "assistant", "content": answer}])
+        self.dynamoDB_client.save_messages(f"{str(chat_id)}_{str(bot_id)}", previous_messages[-(CONTEXT_LENGTH-1):] + [{"role": "user", "content": user_message}, {"role": "assistant", "content": answer}])
         return answer
