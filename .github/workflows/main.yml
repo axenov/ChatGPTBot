@@ -26,6 +26,7 @@ jobs:
           pwd
           ls
           zip -r ../lambda.zip .
+          zipinfo ../lambda.zip
 
       - name: deploy to AWS Lambda
         uses: appleboy/lambda-action@master
