@@ -52,7 +52,7 @@ class telegramClient:
             "chat_id": chat_id,
             "parse_mode": "HTML",
             "text": text,
-            #"reply_to_message_id": original_message_id
+            "reply_to_message_id": original_message_id
         }
         response = http.request('POST', SEND_MESSAGE_URL, 
                                 headers={'Content-Type': 'application/json'},
@@ -81,7 +81,8 @@ class telegramClient:
         """
         if (
             "message" in body and
-            not body["message"]["from"]["is_bot"]
+            not body["message"]["from"]["is_bot"] and
+            "forward_from_message_id" not in body["message"]
             ):
             message = body["message"]
             # Extract the message of a user
@@ -89,6 +90,8 @@ class telegramClient:
                 user_message = message["text"]
             elif "sticker" in body["message"] and "emoji" in body["message"]["sticker"]:
                 user_message = message["sticker"]["emoji"]
+            elif "photo" in body["message"] and "caption" in body["message"]["photo"]:
+                user_message = message["photo"]["caption"]
             else:
                return
            
