@@ -9,6 +9,7 @@ OPENAI_KEY = os.environ.get('OPENAI_KEY')
 OPENAI_MODEL = os.environ.get('OPENAI_MODEL')
 SYSTEM_PROMPT = os.environ.get('SYSTEM_PROMPT')
 ASSYSTANT_PROMPT = os.environ.get('ASSYSTANT_PROMPT')
+FACT_PROMPT = os.environ.get('FACT_PROMPT')
 CONTEXT_LENGTH = int(os.environ.get('CONTEXT_LENGTH'))
 
 class openaiClient:
@@ -21,7 +22,7 @@ class openaiClient:
         previous_messages = self.dynamoDB_client.load_messages(f"{str(chat_id)}_{str(bot_id)}")[-CONTEXT_LENGTH:]
         # Boost the style
         #previous_messages= previous_messages[:int(CONTEXT_LENGTH / 2)] + [{"role": "assistant", "content": ASSYSTANT_PROMPT}] + previous_messages[int(CONTEXT_LENGTH / 2):]
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "assistant", "content": ASSYSTANT_PROMPT}] + \
+        messages = [{"role": "system", "content": FACT_PROMPT+SYSTEM_PROMPT}, {"role": "assistant", "content": ASSYSTANT_PROMPT}] + \
             previous_messages + \
             [{"role": "user", "content": user_message}]
         if random.random()<0.3:
