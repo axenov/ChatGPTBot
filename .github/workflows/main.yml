@@ -23,6 +23,8 @@ jobs:
           mkdir package
           rsync -r --exclude 'package' ./* package/
           cd package
+          pwd
+          ls
           zip -r ../lambda.zip .
 
       - name: deploy to AWS Lambda
