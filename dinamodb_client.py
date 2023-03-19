@@ -11,7 +11,7 @@ class dynamoDBClient:
     def __init__(self) -> None:
         pass
     
-    def save_messages(chat_id, messages):
+    def save_messages(self, chat_id, messages):
         """ Save messages to a DynamoDB table"""
         data = {
             'chat_id': chat_id,
@@ -21,7 +21,7 @@ class dynamoDBClient:
         response = table.put_item(Item=data)
         return response
 
-    def load_messages(chat_id):
+    def load_messages(self, chat_id):
         """ Load messages from a DynamoDB table"""
         table = dynamodb.Table(DYNAMODB_TABLE_NAME)
 
