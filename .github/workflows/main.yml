@@ -18,13 +18,13 @@ jobs:
         with:
           python-version: 3.9
 
-    - name: package code and dependencies
-      run: |
-        mkdir package
-        pip install -r requirements.txt -t package/
-        rsync -r --exclude 'package' ./* package/
-        cd package
-        zip -r ../lambda.zip .
+      - name: package code and dependencies
+        run: |
+          mkdir package
+          pip install -r requirements.txt -t package/
+          rsync -r --exclude 'package' ./* package/
+          cd package
+          zip -r ../lambda.zip .
 
       - name: deploy to AWS Lambda
         uses: appleboy/lambda-action@master
