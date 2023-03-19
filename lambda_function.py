@@ -90,8 +90,8 @@ class telegramClient:
                 user_message = message["text"]
             elif "sticker" in body["message"] and "emoji" in body["message"]["sticker"]:
                 user_message = message["sticker"]["emoji"]
-            elif "photo" in body["message"] and "caption" in body["message"]["photo"]:
-                user_message = message["photo"]["caption"]
+            elif "photo" in body["message"] and "caption" in body["message"]:
+                user_message = message["caption"]
             else:
                return
            
