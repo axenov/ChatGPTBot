@@ -47,7 +47,7 @@ class telegramClient:
         """ The function that decides whether the bot should reply to a message or not """
         if (
             ("reply_to_message" in message and message["reply_to_message"]["from"]["id"] == BOT_ID) or
-            ("entities" in message and message["entities"][0]["type"] == "mention" and "@" + BOT_NAME in message["text"])
+            ("entities" in message and message["entities"][0]["type"] == "mention" and ("@" + BOT_NAME) in message["text"])
         ):
             return True
         else:
@@ -74,7 +74,7 @@ class telegramClient:
             if chat_id not in ALLOWED_CHATS:
                 return
 
-            if "entities" in message and message["entities"][0]["type"]  == "bot_command" and  "/" + RESET_COMMAND in message["text"]:
+            if "entities" in message and message["entities"][0]["type"]  == "bot_command" and  ("/" + RESET_COMMAND) in message["text"]:
                 dynamoDB_client.reset_chat(f"{str(chat_id)}_{str(BOT_ID)}")
                 return
             
