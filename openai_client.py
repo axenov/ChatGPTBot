@@ -35,5 +35,5 @@ class openaiClient:
         )
         answer = response["choices"][0]["message"]["content"]
         print(answer)
-        dynamoDB_client.save_messages(f"{str(chat_id)}_{str(bot_id)}", messages[-(CONTEXT_LENGTH-1):] + [json.dumps({"role": "assistant", "content": answer})])
+        dynamoDB_client.save_messages(f"{str(chat_id)}_{str(bot_id)}", previous_messages[-(CONTEXT_LENGTH-1):] + [{"role": "assistant", "content": answer}])
         return answer

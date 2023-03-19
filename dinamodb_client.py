@@ -1,5 +1,6 @@
 import os
 import boto3
+import json
 
 from botocore.exceptions import ClientError
 
@@ -15,7 +16,7 @@ class dynamoDBClient:
         """ Save messages to a DynamoDB table"""
         data = {
             'chat_id': table_id,
-            'messages': "\n\n".join(messages),
+            'messages': "\n\n".join([json.dumps(message) for message in messages])
         }
         table = dynamodb.Table(DYNAMODB_TABLE_NAME)
         response = table.put_item(Item=data)
@@ -29,6 +30,9 @@ class dynamoDBClient:
             response = table.get_item(Key={'chat_id': table_id})
         except ClientError as e:
             print(e.response['Error']['Message'])
-            return []
+            messages = []
         else:
-            return response['Item']["messages"].split("\n\n")
+            messages = response['Item']["messages"].split("\n\n")
+            
+        messages = [json.loads(message) for message in messages]
+        return messages
