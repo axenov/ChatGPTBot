@@ -21,10 +21,8 @@ jobs:
       - name: package code and dependencies
         run: |
           mkdir package
+          pip install -r requirements.txt -t package/
           rsync -r --exclude 'package' ./* package/
-          cd package
-          pwd
-          ls
           zip -r ../lambda.zip .
           zipinfo ../lambda.zip
 
