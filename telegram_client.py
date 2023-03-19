@@ -13,9 +13,11 @@ ALLOWED_CHATS = [int(num) for num in os.environ.get('ALLOWED_CHATS').split(',')]
 SEND_MESSAGE_URL = 'https://api.telegram.org/bot' + TELEGRAM_TOKEN + '/sendMessage'
 http = urllib3.PoolManager()
 
+openai_client = openaiClient()
+
 class telegramClient:
     def __init__(self) -> None:
-        self.openai_client = openaiClient()
+        pass
     
     def send_message(self, text: str, chat_id, original_message_id):
         """ Reply to a message of a user
@@ -37,11 +39,7 @@ class telegramClient:
         print(response.data)
     
     def should_reply(self, message:dict):
-        """ The function that decides whether the bot should reply to a message or not
-
-        Returns:
-            bool: boolean value
-        """
+        """ The function that decides whether the bot should reply to a message or not """
         if "reply_to_message" in message and message["reply_to_message"]["from"]["id"] == BOT_ID:
             return True
         else:
@@ -78,5 +76,5 @@ class telegramClient:
                 return
             
             if self.should_reply(message):
-                bot_message = self.openai_client.complete_chat(user_message)
+                bot_message = openai_client.complete_chat(user_message, chat_id)
                 self.send_message(bot_message, chat_id, message_id)
