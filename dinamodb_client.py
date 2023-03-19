@@ -32,7 +32,10 @@ class dynamoDBClient:
             print(e.response['Error']['Message'])
             messages = []
         else:
-            messages = response['Item']["messages"].split("\n\n")
-            
+            if 'Item' in response:
+                messages = response['Item']["messages"].split("\n\n")
+            else:
+                messages =  []
+                    
         messages = [json.loads(message) for message in messages]
         return messages
