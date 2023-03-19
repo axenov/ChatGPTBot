@@ -18,7 +18,7 @@ class openaiClient:
     
     def complete_chat(self, user_message: str, chat_id: int, bot_id: int):
         """ Generate the bot's answer to a user's message"""
-        previous_messages = dynamoDB_client.load_messages(chat_id=f"{str(chat_id)}_{str(bot_id)}")[-CONTEXT_LENGTH:]
+        previous_messages = dynamoDB_client.load_messages(f"{str(chat_id)}_{str(bot_id)}")[-CONTEXT_LENGTH:]
         
         messages = [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "assistant", "content": ASSYSTANT_PROMPT}] + \
             previous_messages + \
