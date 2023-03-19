@@ -19,7 +19,7 @@ class openaiClient:
         """ Generate the bot's answer to a user's message"""
         previous_messages = self.dynamoDB_client.load_messages(f"{str(chat_id)}_{str(bot_id)}")[-CONTEXT_LENGTH:]
         # Boost the style
-        previous_messages= previous_messages[:int(CONTEXT_LENGTH / 2)] + [{"role": "assistant", "content": ASSYSTANT_PROMPT}] + previous_messages[int(CONTEXT_LENGTH / 2):]
+        #previous_messages= previous_messages[:int(CONTEXT_LENGTH / 2)] + [{"role": "assistant", "content": ASSYSTANT_PROMPT}] + previous_messages[int(CONTEXT_LENGTH / 2):]
         messages = [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "assistant", "content": ASSYSTANT_PROMPT}] + \
             previous_messages + \
             [{"role": "user", "content": user_message}]
