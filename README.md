@@ -22,4 +22,6 @@ Environmental Variables:
 | ASSYSTANT_PROMPT    | typical message of a bot, use it to set the style |
 | CONTEXT_LENGTH      | number of messages analyzed to make a reply       |
 | DYNAMODB_TABLE_NAME | DynamoDB table name                               |
+| RESET_COMMAND       | the Telegram bot command to reset the history     |
+| BOT_NAME            | the name of the bot as it is in Telegram          |
 
