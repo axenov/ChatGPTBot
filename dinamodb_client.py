@@ -31,4 +31,4 @@ class dynamoDBClient:
             print(e.response['Error']['Message'])
             return []
         else:
-            return response['Item']["messages"].split("\n\n")
+            return response['Item']["messages"]["S"].split("\n\n")
