@@ -74,7 +74,7 @@ class telegramClient:
             if chat_id not in ALLOWED_CHATS:
                 return
 
-            if "entities" in message and message["entities"][0]["type"]  == "bot_command" and message["text"] == "/" + RESET_COMMAND:
+            if "entities" in message and message["entities"][0]["type"]  == "bot_command" and  "/" + RESET_COMMAND in message["text"]:
                 dynamoDB_client.reset_chat(f"{str(chat_id)}_{str(BOT_ID)}")
                 return
             
