@@ -10,16 +10,16 @@ SYSTEM_PROMPT = os.environ.get('SYSTEM_PROMPT')
 ASSYSTANT_PROMPT = os.environ.get('ASSYSTANT_PROMPT')
 CONTEXT_LENGTH = int(os.environ.get('CONTEXT_LENGTH'))
 
-dynamoDB_client = dynamoDBClient()
-
+#dynamoDB_client = dynamoDBClient()
 class openaiClient:
     def __init__(self) -> None:
         openai.api_key = OPENAI_KEY
     
-    def complete_chat(self, user_message: str, chat_id: int):
+    def complete_chat(self, user_message: str, chat_id: int, bot_id: int):
         """ Generate the bot's answer to a user's message"""
-        previous_messages = dynamoDB_client.load_messages(chat_id=str(chat_id))[-CONTEXT_LENGTH:]
-
+        #previous_messages = dynamoDB_client.load_messages(chat_id=f"{str(chat_id)}_{str(bot_id)}")[-CONTEXT_LENGTH:]
+        previous_messages=[]
+        
         messages = [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "assistant", "content": ASSYSTANT_PROMPT}] + \
             previous_messages + \
             [{"role": "user", "content": user_message}]

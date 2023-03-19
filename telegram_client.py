@@ -76,5 +76,5 @@ class telegramClient:
                 return
             
             if self.should_reply(message):
-                bot_message = openai_client.complete_chat(user_message, chat_id)
+                bot_message = openai_client.complete_chat(user_message, chat_id, BOT_ID)
                 self.send_message(bot_message, chat_id, message_id)
