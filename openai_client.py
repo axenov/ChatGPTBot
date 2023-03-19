@@ -11,6 +11,7 @@ ASSYSTANT_PROMPT = os.environ.get('ASSYSTANT_PROMPT')
 CONTEXT_LENGTH = int(os.environ.get('CONTEXT_LENGTH'))
 
 dynamoDB_client = dynamoDBClient()
+
 class openaiClient:
     def __init__(self) -> None:
         openai.api_key = OPENAI_KEY
@@ -34,5 +35,5 @@ class openaiClient:
         )
         answer = response["choices"][0]["message"]["content"]
         print(answer)
-        #dynamoDB_client.save_messages(f"{str(chat_id)}_{str(bot_id)}", messages[-(CONTEXT_LENGTH-1):] + [json.dumps({"role": "assistant", "content": answer})])
+        dynamoDB_client.save_messages(f"{str(chat_id)}_{str(bot_id)}", messages[-(CONTEXT_LENGTH-1):] + [json.dumps({"role": "assistant", "content": answer})])
         return answer
