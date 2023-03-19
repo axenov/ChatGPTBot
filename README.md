@@ -24,4 +24,10 @@ Environmental Variables:
 | DYNAMODB_TABLE_NAME | DynamoDB table name                               |
 | RESET_COMMAND       | the Telegram bot command to reset the history     |
 | BOT_NAME            | the name of the bot as it is in Telegram          |
+| MAX_TOKENS          | number of tokens in model response                |
+| PRESENCE_PENALTY    | presence penalty model parameter                  |
+| FREQUENCY_PENALTY   | frequency penalty model parameter                 |
+| TOP_P               | top_p model parameter                             |
+| TEMPERATURE         | temperature model parameter                       |
+| FACT_PROMPT         | facts that bot must be aware of                   |
 
