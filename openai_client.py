@@ -11,6 +11,11 @@ SYSTEM_PROMPT = os.environ.get('SYSTEM_PROMPT')
 ASSYSTANT_PROMPT = os.environ.get('ASSYSTANT_PROMPT')
 FACT_PROMPT = os.environ.get('FACT_PROMPT')
 CONTEXT_LENGTH = int(os.environ.get('CONTEXT_LENGTH'))
+TEMPERATURE = float(os.environ.get('TEMPERATURE'))
+TOP_P = float(os.environ.get('TOP_P'))
+FREQUENCY_PENALTY = float(os.environ.get('FREQUENCY_PENALTY'))
+PRESENCE_PENALTY = float(os.environ.get('PRESENCE_PENALTY'))
+MAX_TOKENS = int(os.environ.get('MAX_TOKENS'))
 
 class openaiClient:
     def __init__(self, dynamoDB_client: dynamoDBClient()) -> None:
@@ -20,23 +25,22 @@ class openaiClient:
     def complete_chat(self, user_message: str, chat_id: int, bot_id: int):
         """ Generate the bot's answer to a user's message"""
         previous_messages = self.dynamoDB_client.load_messages(f"{str(chat_id)}_{str(bot_id)}")[-CONTEXT_LENGTH:]
-        # Boost the style
-        #previous_messages= previous_messages[:int(CONTEXT_LENGTH / 2)] + [{"role": "assistant", "content": ASSYSTANT_PROMPT}] + previous_messages[int(CONTEXT_LENGTH / 2):]
-        messages = [{"role": "system", "content": FACT_PROMPT+SYSTEM_PROMPT}, {"role": "assistant", "content": ASSYSTANT_PROMPT}] + \
+        messages = [{"role": "system", "content": FACT_PROMPT + " " + SYSTEM_PROMPT}, {"role": "assistant", "content": ASSYSTANT_PROMPT}] + \
             previous_messages + \
             [{"role": "user", "content": user_message}]
+         # Boost the task
         if random.random()<0.3:
-            messages += [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "assistant", "content": ASSYSTANT_PROMPT}]
+            messages += [{"role": "system", "content": SYSTEM_PROMPT}]
         print(messages)
         
         response = openai.ChatCompletion.create(
             model=OPENAI_MODEL,
             messages = messages,
-            temperature=1.0,
-            top_p=1.0,
-            max_tokens=256,
-            frequency_penalty=1.0,
-            presence_penalty=1.0,
+            temperature=TEMPERATURE,
+            top_p=TOP_P,
+            max_tokens=MAX_TOKENS,
+            frequency_penalty=FREQUENCY_PENALTY,
+            presence_penalty=PRESENCE_PENALTY,
         )
         answer = response["choices"][0]["message"]["content"]
         print(answer)
