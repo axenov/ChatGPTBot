@@ -23,7 +23,7 @@ class openaiClient:
         messages = [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "assistant", "content": ASSYSTANT_PROMPT}] + \
             previous_messages + \
             [{"role": "user", "content": user_message}]
-        
+        print(messages)
         
         response = openai.ChatCompletion.create(
             model=OPENAI_MODEL,
@@ -35,5 +35,5 @@ class openaiClient:
         )
         answer = response["choices"][0]["message"]["content"]
         print(answer)
-        dynamoDB_client.save_messages(f"{str(chat_id)}_{str(bot_id)}", previous_messages[-(CONTEXT_LENGTH-1):] + [{"role": "assistant", "content": answer}])
+        dynamoDB_client.save_messages(f"{str(chat_id)}_{str(bot_id)}", previous_messages[-(CONTEXT_LENGTH-1):] + [{"role": "user", "content": user_message}, {"role": "assistant", "content": answer}])
         return answer
