@@ -6,18 +6,31 @@ on:
     branches:
       - main
 jobs:
-
   deploy_source:
     name: deploy lambda from source
     runs-on: ubuntu-latest
     steps:
       - name: checkout source code
-        uses: actions/checkout@v1
-      - name: default deploy
+        uses: actions/checkout@v2
+
+      - name: set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: package code and dependencies
+        run: |
+          mkdir package
+          pip install -r requirements.txt -t package/
+          cp -r ./* package/
+          cd package
+          zip -r ../lambda.zip .
+
+      - name: deploy to AWS Lambda
         uses: appleboy/lambda-action@master
         with:
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws_region: ${{ secrets.AWS_REGION }}
           function_name: complete_chat
-          source: lambda_function.py
+          source: lambda.zip
