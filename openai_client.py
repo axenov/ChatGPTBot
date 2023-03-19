@@ -10,7 +10,7 @@ SYSTEM_PROMPT = os.environ.get('SYSTEM_PROMPT')
 ASSYSTANT_PROMPT = os.environ.get('ASSYSTANT_PROMPT')
 CONTEXT_LENGTH = int(os.environ.get('CONTEXT_LENGTH'))
 
-#dynamoDB_client = dynamoDBClient()
+dynamoDB_client = dynamoDBClient()
 class openaiClient:
     def __init__(self) -> None:
         openai.api_key = OPENAI_KEY
