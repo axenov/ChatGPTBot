@@ -21,7 +21,7 @@ jobs:
       - name: package code and dependencies
         run: |
           mkdir package
-          pip install -r requirements.txt -t package/
+          pip install -r requirements.txt -t .
           cp -r ./* package/
           cd package
           zip -r ../lambda.zip .
