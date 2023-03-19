@@ -1,6 +1,7 @@
 import os
 import openai
 import json
+import random
 
 from dinamodb_client import dynamoDBClient
 
@@ -23,6 +24,8 @@ class openaiClient:
         messages = [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "assistant", "content": ASSYSTANT_PROMPT}] + \
             previous_messages + \
             [{"role": "user", "content": user_message}]
+        if random.random()<0.3:
+            messages += [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "assistant", "content": ASSYSTANT_PROMPT}]
         print(messages)
         
         response = openai.ChatCompletion.create(
