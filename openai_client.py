@@ -30,7 +30,7 @@ class openaiClient:
             [{"role": "user", "content": user_message}]
          # Boost the task
         if random.random()<0.2:
-            messages += [{"role": "system", "content": SYSTEM_PROMPT},{"role": "assistant", "content": ASSYSTANT_PROMPT}]
+            messages += [{"role": "assistant", "content": ASSYSTANT_PROMPT}]
         print(messages)
         
         response = openai.ChatCompletion.create(
