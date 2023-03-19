@@ -1,19 +1,40 @@
 import json
 import os
 import urllib3
+import random
+#import openai
+
+BOT_ID = int(os.environ.get('BOT_ID'))
+TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
+FREQUENCY = float(os.environ.get('FREQUENCY'))
+ALLOWED_CHATS = [int(num) for num in os.environ.get('ALLOWED_CHATS').split(',')]
 
 OPENAI_KEY = os.environ.get('OPENAI_KEY')
-BOT_ID = os.environ.get('BOT_ID')
-TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
-FREQUENCY = os.environ.get('FREQUENCY')
-ALLOWED_CHATS = [int(num) for num in os.environ.get('ALLOWED_CHATS').split(',')]
+OPENAI_MODEL = os.environ.get('OPENAI_MODEL')
 
 SEND_MESSAGE_URL = 'https://api.telegram.org/bot' + TELEGRAM_TOKEN + '/sendMessage'
 http = urllib3.PoolManager()
 
 class openaiClient:
     def __init__(self) -> None:
+        #openai.api_key = OPENAI_KEY
         pass
+    
+    def complete_chat(self, user_message: str):
+        # response = openai.ChatCompletion.create(
+        #     model=OPENAI_MODEL,
+        #     messages = [
+        #         {"role": "system", "content": "Ты чат-бот с открытым исходным кодом, который использует OpenAI GPT-3.5 для генерации ответов на вопросы. Пиши краткие сообщения."},
+        #         {"role": "user", "content": user_message},
+        #     ],
+        #     temperature=0.8,
+        #     max_tokens=128,
+        #     frequency_penalty=1.0,
+        #     presence_penalty=0.0,
+        # )
+        # answer = response["choices"][0]["message"]["content"]
+        answer = user_message
+        return answer
 
 
 class telegramClient:
@@ -47,6 +68,10 @@ class telegramClient:
         """
         if "reply_to_message" in message and message["reply_to_message"]["from"]["id"] == BOT_ID:
             return True
+        else:
+            bet = random.random()
+            if bet < FREQUENCY:
+                return True
         return False
     
     def process_message(self, body):
@@ -74,8 +99,7 @@ class telegramClient:
                 return
             
             if self.should_reply(message):
-                ## Add here OpenAI call
-                bot_message = user_message
+                bot_message = self.openai_client.complete_chat(user_message)
                 self.send_message(bot_message, chat_id, message_id)
 
 
