@@ -35,7 +35,7 @@ class dynamoDBClient:
             if 'Item' in response:
                 messages = response['Item']["messages"].split("\n\n")
             else:
-                messages =  []
+                messages =  ""
                     
         messages = [json.loads(message) for message in messages]
         return messages
