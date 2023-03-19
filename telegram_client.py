@@ -93,5 +93,5 @@ class telegramClient:
                 bot_message = openai_client.complete_chat(user_message, chat_id, BOT_ID)
                 self.send_message(bot_message, chat_id, message_id)
             else:
-                previous_messages = self.dynamoDB_client.load_messages(f"{str(chat_id)}_{str(BOT_ID)}")[-CONTEXT_LENGTH:]
-                self.dynamoDB_client.save_messages(f"{str(chat_id)}_{str(BOT_ID)}", previous_messages[-(CONTEXT_LENGTH-1):] + [{"role": "user", "content": user_message}])
+                previous_messages = dynamoDB_client.load_messages(f"{str(chat_id)}_{str(BOT_ID)}")[-CONTEXT_LENGTH:]
+                dynamoDB_client.save_messages(f"{str(chat_id)}_{str(BOT_ID)}", previous_messages[-(CONTEXT_LENGTH-1):] + [{"role": "user", "content": user_message}])
