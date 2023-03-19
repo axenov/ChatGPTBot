@@ -12,7 +12,7 @@ TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
 FREQUENCY = float(os.environ.get('FREQUENCY'))
 ALLOWED_CHATS = [int(num) for num in os.environ.get('ALLOWED_CHATS').split(',')]
 RESET_COMMAND = os.environ.get('RESET_COMMAND')
-
+CONTEXT_LENGTH = int(os.environ.get('CONTEXT_LENGTH'))
 
 SEND_MESSAGE_URL = 'https://api.telegram.org/bot' + TELEGRAM_TOKEN + '/sendMessage'
 http = urllib3.PoolManager()
@@ -92,3 +92,6 @@ class telegramClient:
                 user_message = user_message.replace("@" + BOT_NAME, "")
                 bot_message = openai_client.complete_chat(user_message, chat_id, BOT_ID)
                 self.send_message(bot_message, chat_id, message_id)
+            else:
+                previous_messages = self.dynamoDB_client.load_messages(f"{str(chat_id)}_{str(BOT_ID)}")[-CONTEXT_LENGTH:]
+                self.dynamoDB_client.save_messages(f"{str(chat_id)}_{str(BOT_ID)}", previous_messages[-(CONTEXT_LENGTH-1):] + [{"role": "user", "content": user_message}])

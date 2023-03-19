@@ -42,5 +42,5 @@ class dynamoDBClient:
     
     def reset_chat(self, table_id):
         """ Reset a chat in a DynamoDB table"""
-        response = self.save_messages(self, table_id, [])
+        response = self.save_messages(table_id, [])
         return response
