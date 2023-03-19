@@ -3,7 +3,7 @@ import boto3
 
 from botocore.exceptions import ClientError
 
-DYNAMODB_TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME')
+DYNAMODB_TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME') 
 
 dynamodb = boto3.resource('dynamodb')
 
@@ -31,4 +31,4 @@ class dynamoDBClient:
             print(e.response['Error']['Message'])
             return []
         else:
-            return response['Item']["messages"]["S"].split("\n\n")
+            return response['Item']["messages"].split("\n\n")
