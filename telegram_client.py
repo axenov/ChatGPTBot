@@ -45,10 +45,8 @@ class telegramClient:
     
     def should_reply(self, message:dict):
         """ The function that decides whether the bot should reply to a message or not """
-        print(message["from"]["id"])
-        print(message["chat"]["id"])
         if (
-            (message["from"]["id"] == message["chat"]["id"]) and
+            (message["from"]["id"] == message["chat"]["id"]) or
             ("reply_to_message" in message and message["reply_to_message"]["from"]["id"] == BOT_ID) or
             ("entities" in message and message["entities"][0]["type"] == "mention" and ("@" + BOT_NAME) in message["text"])
         ):
