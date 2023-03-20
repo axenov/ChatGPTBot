@@ -9,7 +9,7 @@ OPENAI_KEY = os.environ.get('OPENAI_KEY')
 OPENAI_MODEL = os.environ.get('OPENAI_MODEL')
 SYSTEM_PROMPT = os.environ.get('SYSTEM_PROMPT')
 ASSYSTANT_PROMPT = os.environ.get('ASSYSTANT_PROMPT')
-FACT_PROMPT = os.environ.get('FACT_PROMPT')
+STYLE_PROMPT = os.environ.get('STYLE_PROMPT')
 CONTEXT_LENGTH = int(os.environ.get('CONTEXT_LENGTH'))
 TEMPERATURE = float(os.environ.get('TEMPERATURE'))
 TOP_P = float(os.environ.get('TOP_P'))
@@ -25,12 +25,9 @@ class openaiClient:
     def complete_chat(self, user_message: str, chat_id: int, bot_id: int):
         """ Generate the bot's answer to a user's message"""
         previous_messages = self.dynamoDB_client.load_messages(f"{str(chat_id)}_{str(bot_id)}")[-CONTEXT_LENGTH:]
-        messages = [{"role": "system", "content": FACT_PROMPT + " " + SYSTEM_PROMPT}, {"role": "assistant", "content": ASSYSTANT_PROMPT}] + \
+        messages = [{"role": "system", "content": SYSTEM_PROMPT}] + \
             previous_messages + \
-            [{"role": "user", "content": user_message}]
-         # Boost the task
-        if random.random()<0.2:
-            messages += [{"role": "assistant", "content": ASSYSTANT_PROMPT}]
+            [{"role": "user", "content": f"{user_message}\n{STYLE_PROMPT}"}]
         print(messages)
         
         response = openai.ChatCompletion.create(
