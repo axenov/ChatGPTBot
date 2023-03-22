@@ -8,7 +8,6 @@ from dinamodb_client import dynamoDBClient
 OPENAI_KEY = os.environ.get('OPENAI_KEY')
 OPENAI_MODEL = os.environ.get('OPENAI_MODEL')
 SYSTEM_PROMPT = os.environ.get('SYSTEM_PROMPT')
-ASSYSTANT_PROMPT = os.environ.get('ASSYSTANT_PROMPT')
 STYLE_PROMPT = os.environ.get('STYLE_PROMPT')
 CONTEXT_LENGTH = int(os.environ.get('CONTEXT_LENGTH'))
 TEMPERATURE = float(os.environ.get('TEMPERATURE'))
