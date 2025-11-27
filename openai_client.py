@@ -6,6 +6,7 @@ import re
 from typing import Any, Dict, List, Optional
 
 from google import generativeai as genai
+from google.genai import types
 from openai import OpenAI
 
 from dinamodb_client import dynamoDBClient
@@ -63,7 +64,7 @@ def _normalize_aspect_ratio(aspect_ratio: Optional[str]) -> Optional[str]:
     if not aspect_ratio:
         return None
     candidate = str(aspect_ratio).strip().lower()
-    return candidate if candidate in SUPPORTED_ASPECT_RATIOS else None
+    return candidate if candidate in SUPPORTED_ASPECT_RATIOS else "1:1"
 
 
 class openaiClient:
@@ -142,14 +143,15 @@ class openaiClient:
 
     def _generate_image(self, prompt: str, aspect_ratio: Optional[str], display_prompt: Optional[str]) -> Optional[Dict[str, Any]]:
         model = genai.GenerativeModel(GEMINI_IMAGE_MODEL)
-        generation_config: Dict[str, Any] = {"response_mime_type": IMAGE_MIME_TYPE}
         normalized_ratio = _normalize_aspect_ratio(aspect_ratio)
-        if normalized_ratio:
-            generation_config["aspect_ratio"] = normalized_ratio
         try:
             response = model.generate_content(
                 [prompt],
-                generation_config=generation_config,
+                config=types.GenerateContentConfig(
+                    image_config=types.ImageConfig(
+                        aspect_ratio=normalized_ratio,
+                    ),
+                ),
             )
         except Exception as exc:
             print(f"Gemini generation failed: {exc}")
