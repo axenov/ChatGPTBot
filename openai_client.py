@@ -5,7 +5,7 @@ import uuid
 import re
 from typing import Any, Dict, List, Optional
 
-from google import generativeai as genai
+from google import genai
 from google.genai import types
 from openai import OpenAI
 
