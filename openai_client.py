@@ -2,6 +2,7 @@ import base64
 import os
 import json
 import uuid
+import re
 from typing import Any, Dict, List, Optional
 
 from google import generativeai as genai
@@ -34,6 +35,37 @@ def _text_from_content(content: Any) -> str:
     return str(content)
 
 
+def _strip_prefix(text: str) -> str:
+    cleaned = text.strip()
+    cleaned = re.sub(r"^\[msg:[^\]]+\]\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"^@[^\n]*?\):\s*", "", cleaned)
+    cleaned = re.sub(r"^@[^\n]*?:\s*", "", cleaned)
+    reply_prefix_pattern = r"^(?:@?[^:]{0,80}?\b(?:reply|ответ)[^:]{0,40}:)\s*"
+    cleaned = re.sub(reply_prefix_pattern, "", cleaned, flags=re.IGNORECASE)
+    return cleaned
+
+
+SUPPORTED_ASPECT_RATIOS = {
+    "1:1",
+    "2:3",
+    "3:2",
+    "3:4",
+    "4:3",
+    "4:5",
+    "5:4",
+    "9:16",
+    "16:9",
+    "21:9",
+}
+
+
+def _normalize_aspect_ratio(aspect_ratio: Optional[str]) -> Optional[str]:
+    if not aspect_ratio:
+        return None
+    candidate = str(aspect_ratio).strip().lower()
+    return candidate if candidate in SUPPORTED_ASPECT_RATIOS else None
+
+
 class openaiClient:
     def __init__(self, dynamoDB_client: dynamoDBClient) -> None:
         self.client = OpenAI(api_key=OPENAI_KEY)
@@ -47,9 +79,16 @@ class openaiClient:
         return f"{str(chat_id)}_{str(bot_id)}"
 
     def _format_message_for_model(self, message: Dict[str, Any], include_style_prompt: bool = False) -> Dict[str, Any]:
-        prefix = f"[msg:{message.get('id')}] @{message.get('username', 'user')}"
-        if message.get("reply_to_id"):
-            prefix += f" (in reply to msg:{message['reply_to_id']})"
+        message_id = message.get("id")
+        reply_id = message.get("reply_to_id")
+        if reply_id and reply_id == message_id:
+            reply_id = None
+
+        # Surface both message ID and reply target to help the model follow threading.
+        prefix_parts = [f"@{message.get('username', 'user')} said (message {message_id})"]
+        if reply_id:
+            prefix_parts.append(f"in reply to message {reply_id}")
+        prefix = " ".join(prefix_parts)
         text_body = message.get("text", "")
         if include_style_prompt and STYLE_PROMPT:
             text_body = f"{text_body}\n{STYLE_PROMPT}"
@@ -79,9 +118,9 @@ class openaiClient:
                                 "type": "string",
                                 "description": "Target visual description to render."
                             },
-                            "size": {
+                            "aspect_ratio": {
                                 "type": "string",
-                                "description": "Preferred image size, such as 1024x1024.",
+                                "description": "One of the Gemini-supported aspect ratios, such as 1:1 or 16:9.",
                             }
                         },
                         "required": ["prompt"],
@@ -93,18 +132,20 @@ class openaiClient:
     def _summarize_conversation(self, messages: List[Dict[str, Any]]) -> str:
         lines = []
         for message in messages:
-            prefix = f"[msg:{message.get('id')}] @{message.get('username', 'user')}"
-            if message.get("reply_to_id"):
-                prefix += f" replying to msg:{message['reply_to_id']}"
+            prefix = f"@{message.get('username', 'user')} (message {message.get('id')})"
+            reply_id = message.get("reply_to_id")
+            if reply_id and reply_id != message.get("id"):
+                prefix += f" replying to {reply_id}"
             text_body = message.get("text", "")
             lines.append(f"{prefix}: {text_body}")
         return "\n".join(lines)
 
-    def _generate_image(self, prompt: str, size: Optional[str]) -> Optional[Dict[str, Any]]:
+    def _generate_image(self, prompt: str, aspect_ratio: Optional[str], display_prompt: Optional[str]) -> Optional[Dict[str, Any]]:
         model = genai.GenerativeModel(GEMINI_IMAGE_MODEL)
         generation_config: Dict[str, Any] = {"response_mime_type": IMAGE_MIME_TYPE}
-        if size:
-            generation_config["image_size"] = size
+        normalized_ratio = _normalize_aspect_ratio(aspect_ratio)
+        if normalized_ratio:
+            generation_config["aspect_ratio"] = normalized_ratio
         try:
             response = model.generate_content(
                 [prompt],
@@ -123,7 +164,8 @@ class openaiClient:
                 return {
                     "data": part.inline_data.data,
                     "mime_type": part.inline_data.mime_type or IMAGE_MIME_TYPE,
-                    "prompt": prompt
+                    "prompt": prompt,
+                    "display_prompt": display_prompt or prompt,
                 }
         return None
 
@@ -134,9 +176,9 @@ class openaiClient:
             if tool_call.function.name == "generate_image":
                 args = json.loads(tool_call.function.arguments)
                 prompt = args.get("prompt", "")
-                size = args.get("size")
+                aspect_ratio = args.get("aspect_ratio")
                 prompt_with_history = f"{prompt}\n\nConversation summary:\n{self._summarize_conversation(conversation_messages)}"
-                image_result = self._generate_image(prompt_with_history, size)
+                image_result = self._generate_image(prompt_with_history, aspect_ratio, prompt)
                 if image_result:
                     generated_images.append(image_result)
                     tool_responses.append({
@@ -181,9 +223,11 @@ class openaiClient:
         previous_messages = self.dynamoDB_client.load_messages(chat_key)
         limited_previous = previous_messages[-CONTEXT_LENGTH:]
         formatted_history = [self._format_message_for_model(m) for m in limited_previous]
-        model_messages = [{"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}] + formatted_history + [
-            self._format_message_for_model(user_message, include_style_prompt=True)
-        ]
+        tool_instruction = "If the user asks to create or render an image, always call the `generate_image` tool and do not describe the JSON yourself. Return concise, human-friendly answers without technical prefixes."
+        model_messages = [
+            {"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]},
+            {"role": "system", "content": [{"type": "text", "text": tool_instruction}]},
+        ] + formatted_history + [self._format_message_for_model(user_message, include_style_prompt=True)]
 
         response = self.client.chat.completions.create(
             model=OPENAI_MODEL,
@@ -191,6 +235,7 @@ class openaiClient:
             temperature=TEMPERATURE,
             max_completion_tokens=MAX_COMPLETION_TOKENS,
             tools=self._build_tools(),
+            tool_choice="auto",
         )
 
         first_choice = response.choices[0].message
@@ -203,7 +248,7 @@ class openaiClient:
                 model_messages + [first_choice.model_dump()]
             )
 
-        assistant_text = _text_from_content(assistant_message.content)
+        assistant_text = _strip_prefix(_text_from_content(assistant_message.content))
         assistant_images = [
             base64.b64encode(image_data["data"]).decode("utf-8")
             if isinstance(image_data.get("data"), (bytes, bytearray))
@@ -213,17 +258,21 @@ class openaiClient:
         assistant_images = [img for img in assistant_images if img]
         assistant_metadata = [
             {
-                "prompt": image_data.get("prompt"),
+                "prompt": _strip_prefix(image_data.get("display_prompt", "") or image_data.get("prompt", "")),
                 "mime_type": image_data.get("mime_type", IMAGE_MIME_TYPE),
             }
             for image_data in tool_generated_images
         ]
+        assistant_id = f"{user_message.get('id', uuid.uuid4().hex)}-assistant"
+        reply_to_id = user_message.get("id")
+        if reply_to_id == assistant_id:
+            reply_to_id = None
         assistant_record = {
             "role": "assistant",
             "username": BOT_NAME,
             "text": assistant_text,
-            "id": f"{user_message.get('id', uuid.uuid4().hex)}-assistant",
-            "reply_to_id": user_message.get("id"),
+            "id": assistant_id,
+            "reply_to_id": reply_to_id,
             "images": assistant_images,
             "tool_images_meta": assistant_metadata,
         }
