@@ -1,10 +1,10 @@
 name: deploy to lambda
 on:
-  # Trigger the workflow on push or pull request,
-  # but only for the main branch
+  # Trigger the workflow on push for main and develop branches
   push:
     branches:
       - main
+      - develop
 jobs:
   deploy_source:
     name: deploy lambda from source
