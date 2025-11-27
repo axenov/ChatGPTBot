@@ -279,7 +279,7 @@ class telegramClient:
 
             if self.should_reply(message):
                 bot_message = openai_client.complete_chat(structured_message, chat_id, BOT_ID)
-                reply_text = f"[msg:{bot_message['id']}] (reply to msg:{bot_message.get('reply_to_id')})\n{bot_message['text']}"
+                reply_text = bot_message.get("text", "").strip()
                 if bot_message.get("text"):
                     self.send_message(reply_text, chat_id, message_id)
                 if bot_message.get("tool_images_meta"):
@@ -287,7 +287,7 @@ class telegramClient:
                         if not encoded:
                             continue
                         image_bytes = base64.b64decode(encoded)
-                        caption = f"[msg:{bot_message['id']}] Image created for msg:{structured_message['id']}\n{image_meta.get('prompt', '')}"
+                        caption = image_meta.get("prompt", "").strip() or "Here is your image."
                         self.send_photo(chat_id, image_bytes, caption, message_id, image_meta.get("mime_type", "image/png"))
             else:
                 previous_messages = dynamoDB_client.load_messages(f"{str(chat_id)}_{str(BOT_ID)}")[-CONTEXT_LENGTH:]
