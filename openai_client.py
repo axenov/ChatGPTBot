@@ -33,10 +33,11 @@ class openaiClient:
             model=OPENAI_MODEL,
             messages = messages,
             temperature=TEMPERATURE,
-            top_p=TOP_P,
-            max_tokens=MAX_TOKENS,
-            frequency_penalty=FREQUENCY_PENALTY,
-            presence_penalty=PRESENCE_PENALTY,
+            max_completion_tokens=MAX_TOKENS,
+            #max_tokens=MAX_TOKENS,
+            #top_p=TOP_P,
+            #frequency_penalty=FREQUENCY_PENALTY,
+            #presence_penalty=PRESENCE_PENALTY,
         )
         answer = response["choices"][0]["message"]["content"]
         print(answer)
