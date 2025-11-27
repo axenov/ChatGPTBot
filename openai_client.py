@@ -47,9 +47,10 @@ class openaiClient:
         return f"{str(chat_id)}_{str(bot_id)}"
 
     def _format_message_for_model(self, message: Dict[str, Any], include_style_prompt: bool = False) -> Dict[str, Any]:
-        prefix = f"[msg:{message.get('id')}] @{message.get('username', 'user')}"
+        prefix_parts = [f"@{message.get('username', 'user')} said"]
         if message.get("reply_to_id"):
-            prefix += f" (in reply to msg:{message['reply_to_id']})"
+            prefix_parts.append(f"in reply to message {message['reply_to_id']}")
+        prefix = " ".join(prefix_parts)
         text_body = message.get("text", "")
         if include_style_prompt and STYLE_PROMPT:
             text_body = f"{text_body}\n{STYLE_PROMPT}"
@@ -93,9 +94,9 @@ class openaiClient:
     def _summarize_conversation(self, messages: List[Dict[str, Any]]) -> str:
         lines = []
         for message in messages:
-            prefix = f"[msg:{message.get('id')}] @{message.get('username', 'user')}"
+            prefix = f"@{message.get('username', 'user')}"
             if message.get("reply_to_id"):
-                prefix += f" replying to msg:{message['reply_to_id']}"
+                prefix += f" replying to {message['reply_to_id']}"
             text_body = message.get("text", "")
             lines.append(f"{prefix}: {text_body}")
         return "\n".join(lines)
@@ -181,9 +182,11 @@ class openaiClient:
         previous_messages = self.dynamoDB_client.load_messages(chat_key)
         limited_previous = previous_messages[-CONTEXT_LENGTH:]
         formatted_history = [self._format_message_for_model(m) for m in limited_previous]
-        model_messages = [{"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}] + formatted_history + [
-            self._format_message_for_model(user_message, include_style_prompt=True)
-        ]
+        tool_instruction = "If the user asks to create or render an image, always call the `generate_image` tool and do not describe the JSON yourself. Return concise, human-friendly answers without technical prefixes."
+        model_messages = [
+            {"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]},
+            {"role": "system", "content": [{"type": "text", "text": tool_instruction}]},
+        ] + formatted_history + [self._format_message_for_model(user_message, include_style_prompt=True)]
 
         response = self.client.chat.completions.create(
             model=OPENAI_MODEL,
@@ -191,6 +194,7 @@ class openaiClient:
             temperature=TEMPERATURE,
             max_completion_tokens=MAX_COMPLETION_TOKENS,
             tools=self._build_tools(),
+            tool_choice="auto",
         )
 
         first_choice = response.choices[0].message
