@@ -2,6 +2,10 @@
 
 This is a conversational assistant for Telegram running on AWS Lambda and DynamoDB and using OpenAI API to generate answers.
 
+New capabilities:
+- Vision understanding when users attach Telegram photos.
+- Image generation through Gemini when the model triggers the dedicated tool.
+
 To connect the Lambda function to you Telegram bot run:
 
 ```bash
@@ -24,9 +28,17 @@ Environmental Variables:
 | DYNAMODB_TABLE_NAME | DynamoDB table name                                         |
 | RESET_COMMAND       | the Telegram bot command to reset the history               |
 | BOT_NAME            | the name of the bot as it is in Telegram                    |
-| MAX_TOKENS          | number of tokens in model response                          |
-| PRESENCE_PENALTY    | presence penalty model parameter                            |
-| FREQUENCY_PENALTY   | frequency penalty model parameter                           |
-| TOP_P               | top_p model parameter                                       |
+| MAX_TOKENS          | maximum completion tokens (sent as `max_completion_tokens`) |
+| PRESENCE_PENALTY    | deprecated for GPT-5 (ignored)                              |
+| FREQUENCY_PENALTY   | deprecated for GPT-5 (ignored)                              |
+| TOP_P               | deprecated for GPT-5 (ignored)                              |
 | TEMPERATURE         | temperature model parameter                                 |
+| GEMINI_API_KEY      | API key for Gemini image generation                         |
+| GEMINI_IMAGE_MODEL  | Gemini model name for image creation (default: gemini-2.5-flash-image) |
+| IMAGE_MIME_TYPE     | MIME type for generated images (e.g., image/png)            |
+
+Deployment notes:
+- Update the Lambda layer/package with the refreshed `requirements.txt` (OpenAI and google-generativeai).
+- Ensure the Telegram webhook is still configured with the API Gateway URL after deployment.
+- Grant the function access to DynamoDB and allow outbound HTTPS so it can reach Telegram, OpenAI, and Gemini endpoints.
 
