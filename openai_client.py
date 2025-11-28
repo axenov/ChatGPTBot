@@ -173,7 +173,7 @@ class openaiClient:
 
     def _generate_image(self, prompt: str, aspect_ratio: Optional[str], display_prompt: Optional[str]) -> Optional[Dict[str, Any]]:
         normalized_ratio = _normalize_aspect_ratio(aspect_ratio)
-        print(f"[LOG] Starting Gemini image generation. Prompt: {prompt[:50]}... Ratio: {normalized_ratio}")
+        print(f"[LOG] Starting Gemini image generation. Prompt: {prompt[:200]}... Ratio: {normalized_ratio}")
         try:
             client = genai.Client(api_key=GEMINI_API_KEY)
             response = client.models.generate_content(
@@ -192,6 +192,23 @@ class openaiClient:
         if not response:
             print("[ERROR] No response object from Gemini.")
             return None
+        
+        # Log full response details for debugging
+        print(f"[DEBUG] Response type: {type(response)}")
+        print(f"[DEBUG] Response has parts: {hasattr(response, 'parts')}")
+        if hasattr(response, 'candidates') and response.candidates:
+            for i, candidate in enumerate(response.candidates):
+                print(f"[DEBUG] Candidate {i}: finish_reason={getattr(candidate, 'finish_reason', 'N/A')}")
+                if hasattr(candidate, 'content') and candidate.content:
+                    print(f"[DEBUG] Candidate {i} content parts: {len(candidate.content.parts) if candidate.content.parts else 0}")
+                    for j, part in enumerate(candidate.content.parts or []):
+                        print(f"[DEBUG] Part {j}: has text={hasattr(part, 'text') and part.text is not None}, has inline_data={hasattr(part, 'inline_data') and part.inline_data is not None}")
+                        if hasattr(part, 'text') and part.text:
+                            print(f"[DEBUG] Part {j} text: {part.text[:200] if part.text else 'None'}...")
+        
+        # Check for blocked content
+        if hasattr(response, 'prompt_feedback'):
+            print(f"[DEBUG] Prompt feedback: {response.prompt_feedback}")
         
         # https://ai.google.dev/gemini-api/docs/image-generation#python_23
         if hasattr(response, "parts"):
