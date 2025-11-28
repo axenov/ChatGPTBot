@@ -261,11 +261,44 @@ class openaiClient:
         updated_messages = previous_messages + [message]
         self._trim_and_save_messages(chat_key, updated_messages)
 
+    def _filter_valid_tool_messages(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Filter out orphaned tool messages that don't have a matching tool_call in the preceding assistant message.
+        OpenAI requires that every 'tool' message must reference a tool_call_id that exists in the previous assistant's tool_calls.
+        """
+        result = []
+        current_valid_tool_call_ids = set()
+        
+        for msg in messages:
+            role = msg.get("role")
+            
+            if role == "assistant" and msg.get("tool_calls"):
+                # This assistant message has tool_calls - collect valid IDs
+                current_valid_tool_call_ids = {tc.get("id") for tc in msg.get("tool_calls", []) if tc.get("id")}
+                result.append(msg)
+            elif role == "tool":
+                # Only include tool response if its tool_call_id is in the valid set
+                tool_call_id = msg.get("tool_call_id")
+                if tool_call_id and tool_call_id in current_valid_tool_call_ids:
+                    result.append(msg)
+                else:
+                    print(f"[WARNING] Skipping orphaned tool message with tool_call_id={tool_call_id}")
+            else:
+                # Regular user/assistant message - reset the valid tool call IDs
+                current_valid_tool_call_ids = set()
+                result.append(msg)
+        
+        return result
+
     def complete_chat(self, user_message: Dict[str, Any], chat_id: int, bot_id: int):
         """Generate the bot's answer to a user's message"""
         chat_key = self._chat_key(chat_id, bot_id)
         previous_messages = self.dynamoDB_client.load_messages(chat_key)
         limited_previous = previous_messages[-CONTEXT_LENGTH:]
+        
+        # Filter out orphaned tool messages that would cause OpenAI API errors
+        limited_previous = self._filter_valid_tool_messages(limited_previous)
+        
         formatted_history = [self._format_message_for_model(m) for m in limited_previous]
         tool_instruction = "TOOL USAGE INSTRUCTIONS: If the user asks to create, draw or render an image or a picture in any language, always call the `generate_image` tool and do not describe the JSON yourself or answer with some text. Otherwise return concise, human-friendly answers without technical prefixes. "
         model_messages = [

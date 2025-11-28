@@ -237,16 +237,26 @@ class telegramClient:
 
     def should_reply(self, message: dict):
         """ The function that decides whether the bot should reply to a message or not """
-        entities = message.get("entities") or []
+        entities = message.get("entities") or message.get("caption_entities") or []
+        # Check both "text" (for regular messages) and "caption" (for photos/media)
+        message_text = message.get("text", "") or message.get("caption", "")
+        
+        print(f"[DEBUG] should_reply: BOT_NAME={BOT_NAME}, message_text={message_text[:100] if message_text else 'empty'}")
+        print(f"[DEBUG] should_reply: entities={entities}")
+        
         mentions_bot = any(
-            entity.get("type") == "mention" and ("@" + BOT_NAME) in message.get("text", "")
+            entity.get("type") == "mention" and ("@" + BOT_NAME) in message_text
             for entity in entities
         )
-        if (
-            (message["from"]["id"] == message["chat"]["id"]) or
-            ("reply_to_message" in message and message["reply_to_message"].get("from", {}).get("id") == BOT_ID) or
-            mentions_bot
-        ):
+        
+        print(f"[DEBUG] should_reply: mentions_bot={mentions_bot}")
+        
+        is_direct_message = message["from"]["id"] == message["chat"]["id"]
+        is_reply_to_bot = "reply_to_message" in message and message["reply_to_message"].get("from", {}).get("id") == BOT_ID
+        
+        print(f"[DEBUG] should_reply: is_direct_message={is_direct_message}, is_reply_to_bot={is_reply_to_bot}")
+        
+        if is_direct_message or is_reply_to_bot or mentions_bot:
             return True
         bet = random.random()
         if bet < FREQUENCY:
