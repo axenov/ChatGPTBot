@@ -208,20 +208,32 @@ class telegramClient:
         print(response.data)
 
     def send_photo(self, chat_id: int, image_bytes: bytes, caption: str, original_message_id: int, mime_type: str = "image/png"):
+        # Ensure we send the actual file name in the tuple
+        filename = f"image.{mime_type.split('/')[-1]}"
+        
+        # The 'fields' dict for urllib3's multipart/form-data
         fields = {
             "chat_id": str(chat_id),
             "caption": format_with_code_blocks(caption),
             "reply_to_message_id": str(original_message_id),
             "parse_mode": "MarkdownV2",
-            "photo": (f"image.{mime_type.split('/')[-1]}", image_bytes, mime_type),
+            "photo": (filename, image_bytes, mime_type),
         }
-        response = http.request(
-            'POST',
-            SEND_PHOTO_URL,
-            fields=fields,
-            encode_multipart=True,
-        )
-        print(response.data)
+        
+        # Note: urllib3 request with fields and encode_multipart=False (or implied via POST with fields) 
+        # usually handles multipart correctly if we don't set Content-Type manually to JSON.
+        # However, verify that we aren't sending 'Content-Type: application/json' which would break it.
+        # The PoolManager.request method generates the correct Content-Type header with boundary.
+        
+        try:
+            response = http.request(
+                'POST',
+                SEND_PHOTO_URL,
+                fields=fields
+            )
+            print(f"Send photo response: {response.data}")
+        except Exception as e:
+            print(f"Error sending photo: {e}")
 
     def should_reply(self, message: dict):
         """ The function that decides whether the bot should reply to a message or not """

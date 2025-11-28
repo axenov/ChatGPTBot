@@ -98,7 +98,16 @@ class openaiClient:
         return {"role": message.get("role", "user"), "content": content_parts}
 
     def _trim_and_save_messages(self, chat_key: str, messages: List[Dict[str, Any]]):
-        trimmed = messages[-CONTEXT_LENGTH:]
+        # Filter out heavy image data before saving history to DynamoDB
+        messages_to_save = []
+        for msg in messages:
+            msg_copy = msg.copy()
+            # Remove base64 image data to avoid exceeding DynamoDB item size limits
+            if "images" in msg_copy:
+                msg_copy["images"] = []
+            messages_to_save.append(msg_copy)
+
+        trimmed = messages_to_save[-CONTEXT_LENGTH:]
         self.dynamoDB_client.save_messages(chat_key, trimmed)
 
     def _build_tools(self) -> List[Dict[str, Any]]:
@@ -249,13 +258,14 @@ class openaiClient:
             )
 
         assistant_text = _strip_prefix(_text_from_content(assistant_message.content))
-        assistant_images = [
-            base64.b64encode(image_data["data"]).decode("utf-8")
-            if isinstance(image_data.get("data"), (bytes, bytearray))
-            else image_data.get("data")
-            for image_data in tool_generated_images
-        ]
-        assistant_images = [img for img in assistant_images if img]
+        assistant_images = []
+        for image_data in tool_generated_images:
+             data = image_data.get("data")
+             if isinstance(data, (bytes, bytearray)):
+                  assistant_images.append(base64.b64encode(data).decode("utf-8"))
+             elif isinstance(data, str):
+                  assistant_images.append(data)
+
         assistant_metadata = [
             {
                 "prompt": _strip_prefix(image_data.get("display_prompt", "") or image_data.get("prompt", "")),
