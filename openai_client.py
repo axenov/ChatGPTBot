@@ -132,7 +132,17 @@ class openaiClient:
 
             messages_to_save.append(msg_copy)
 
+        # Trim to CONTEXT_LENGTH but ensure we don't cut in the middle of a tool call sequence
         trimmed = messages_to_save[-CONTEXT_LENGTH:]
+        
+        # If the first message is a tool response or orphaned, skip until we find a clean start
+        # A clean start is: user message, or assistant message without tool_calls
+        while trimmed and (
+            trimmed[0].get("role") == "tool" or 
+            (trimmed[0].get("role") == "assistant" and trimmed[0].get("tool_calls"))
+        ):
+            trimmed = trimmed[1:]
+        
         self.dynamoDB_client.save_messages(chat_key, trimmed)
 
     def _build_tools(self) -> List[Dict[str, Any]]:
@@ -234,8 +244,9 @@ class openaiClient:
                 args = json.loads(tool_call.function.arguments)
                 prompt = args.get("prompt", "")
                 aspect_ratio = args.get("aspect_ratio")
-                prompt_with_history = f"{prompt}\n\nConversation summary:\n{self._summarize_conversation(conversation_messages)}"
-                image_result = self._generate_image(prompt_with_history, aspect_ratio, prompt)
+                # Send only the clean image description to Gemini, without conversation context
+                # The conversation context was confusing Gemini into responding with text instead of generating an image
+                image_result = self._generate_image(prompt, aspect_ratio, prompt)
                 if image_result:
                     print("[LOG] Image generation successful.")
                     generated_images.append(image_result)
@@ -244,7 +255,7 @@ class openaiClient:
                         "tool_call_id": tool_call.id,
                         "content": json.dumps({
                             "status": "image_generated",
-                            "prompt": prompt_with_history,
+                            "prompt": prompt,
                             "mime_type": image_result.get("mime_type", IMAGE_MIME_TYPE)
                         }),
                     })
