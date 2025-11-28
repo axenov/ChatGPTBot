@@ -295,12 +295,16 @@ class telegramClient:
                 if bot_message.get("text"):
                     self.send_message(reply_text, chat_id, message_id)
                 if bot_message.get("tool_images_meta"):
+                    print(f"[LOG] Found {len(bot_message.get('tool_images_meta'))} images to send.")
                     for image_meta, encoded in zip(bot_message.get("tool_images_meta", []), bot_message.get("images", [])):
                         if not encoded:
+                            print("[ERROR] Encoded image data is missing.")
                             continue
+                        print(f"[LOG] Sending image to Telegram chat {chat_id}...")
                         image_bytes = base64.b64decode(encoded)
                         caption = image_meta.get("prompt", "").strip() or "Here is your image."
                         self.send_photo(chat_id, image_bytes, caption, message_id, image_meta.get("mime_type", "image/png"))
+                        print("[LOG] Image sent successfully.")
             else:
                 previous_messages = dynamoDB_client.load_messages(f"{str(chat_id)}_{str(BOT_ID)}")[-CONTEXT_LENGTH:]
                 dynamoDB_client.save_messages(f"{str(chat_id)}_{str(BOT_ID)}", previous_messages[-(CONTEXT_LENGTH-1):] + [structured_message])

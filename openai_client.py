@@ -148,6 +148,7 @@ class openaiClient:
 
     def _generate_image(self, prompt: str, aspect_ratio: Optional[str], display_prompt: Optional[str]) -> Optional[Dict[str, Any]]:
         normalized_ratio = _normalize_aspect_ratio(aspect_ratio)
+        print(f"[LOG] Starting Gemini image generation. Prompt: {prompt[:50]}... Ratio: {normalized_ratio}")
         try:
             client = genai.Client(api_key=GEMINI_API_KEY)
             response = client.models.generate_content(
@@ -159,36 +160,42 @@ class openaiClient:
                     ),
                 ),
             )
+            print("[LOG] Gemini API response received.")
         except Exception as exc:
-            print(f"Gemini generation failed: {exc}")
+            print(f"[ERROR] Gemini generation failed: {exc}")
             return None
         if not response:
+            print("[ERROR] No response object from Gemini.")
             return None
         
         # https://ai.google.dev/gemini-api/docs/image-generation#python_23
         if hasattr(response, "parts"):
             for part in response.parts:
                 if part.inline_data:
+                    print(f"[LOG] Image data found. Size: {len(part.inline_data.data)} bytes.")
                     return {
                         "data": part.inline_data.data,
                         "mime_type": part.inline_data.mime_type or IMAGE_MIME_TYPE,
                         "prompt": prompt,
                         "display_prompt": display_prompt or prompt,
                     }
-
+        print("[ERROR] No image parts found in Gemini response.")
         return None
 
     def _handle_tool_calls(self, tool_calls, conversation_messages: List[Dict[str, Any]], base_messages):
+        print(f"[LOG] Handling {len(tool_calls)} tool calls.")
         tool_responses = []
         generated_images: List[Dict[str, Any]] = []
         for tool_call in tool_calls:
             if tool_call.function.name == "generate_image":
+                print("[LOG] Processing generate_image tool call.")
                 args = json.loads(tool_call.function.arguments)
                 prompt = args.get("prompt", "")
                 aspect_ratio = args.get("aspect_ratio")
                 prompt_with_history = f"{prompt}\n\nConversation summary:\n{self._summarize_conversation(conversation_messages)}"
                 image_result = self._generate_image(prompt_with_history, aspect_ratio, prompt)
                 if image_result:
+                    print("[LOG] Image generation successful.")
                     generated_images.append(image_result)
                     tool_responses.append({
                         "role": "tool",
@@ -200,6 +207,7 @@ class openaiClient:
                         }),
                     })
                 else:
+                    print("[ERROR] Image generation failed or returned no result.")
                     tool_responses.append({
                         "role": "tool",
                         "tool_call_id": tool_call.id,
@@ -209,8 +217,10 @@ class openaiClient:
                         }),
                     })
         if not tool_responses:
+            print("[LOG] No tool responses generated.")
             return None, [], base_messages
         follow_up_messages = base_messages + tool_responses
+        print("[LOG] Sending tool outputs back to OpenAI model.")
         response = self.client.chat.completions.create(
             model=OPENAI_MODEL,
             messages=follow_up_messages,
