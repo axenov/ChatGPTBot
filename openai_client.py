@@ -76,6 +76,24 @@ class openaiClient:
         return f"{str(chat_id)}_{str(bot_id)}"
 
     def _format_message_for_model(self, message: Dict[str, Any], include_style_prompt: bool = False) -> Dict[str, Any]:
+        # If this is a persisted tool call or tool response, return it directly.
+        # They are stored as raw dicts from OpenAI API (role='tool' or role='assistant' with tool_calls)
+        if message.get("role") == "tool":
+            return {
+                "role": "tool",
+                "tool_call_id": message.get("tool_call_id"),
+                "content": message.get("content")
+            }
+        
+        if message.get("role") == "assistant" and message.get("tool_calls"):
+             # This is a stored assistant message that made tool calls.
+             # We need to reconstruct it properly for the API.
+             return {
+                 "role": "assistant",
+                 "content": message.get("content"),
+                 "tool_calls": message.get("tool_calls")
+             }
+
         message_id = message.get("id")
         reply_id = message.get("reply_to_id")
         if reply_id and reply_id == message_id:
@@ -103,8 +121,15 @@ class openaiClient:
         for msg in messages:
             msg_copy = msg.copy()
             # Remove base64 image data to avoid exceeding DynamoDB item size limits
-            if "images" in msg_copy:
+            if "images" in msg_copy and msg_copy["images"]:
                 msg_copy["images"] = []
+                # Add metadata phrase if user attached an image
+                if msg_copy.get("role") == "user":
+                    msg_copy["text"] = f"{msg_copy.get('text', '')} [User attached an image]"
+                # Add metadata phrase if assistant generated an image
+                elif msg_copy.get("role") == "assistant" and msg_copy.get("tool_images_meta"):
+                     msg_copy["text"] = f"{msg_copy.get('text', '')} [Assistant generated an image]"
+
             messages_to_save.append(msg_copy)
 
         trimmed = messages_to_save[-CONTEXT_LENGTH:]
@@ -260,14 +285,33 @@ class openaiClient:
         first_choice = response.choices[0].message
         assistant_message = first_choice
         tool_generated_images: List[Dict[str, Any]] = []
+        
+        # Collect tool calls and responses for persistence
+        tool_call_records = []
         if first_choice.tool_calls:
-            assistant_message, tool_generated_images, _ = self._handle_tool_calls(
+            # 1. Add the assistant's tool call message to history
+            tool_call_records.append(first_choice.model_dump())
+            
+            assistant_message, tool_generated_images, follow_up_messages = self._handle_tool_calls(
                 first_choice.tool_calls,
                 limited_previous + [user_message],
                 model_messages + [first_choice.model_dump()]
             )
+            
+            # 2. Add the tool response messages to history (from follow_up_messages)
+            # follow_up_messages contains [..., tool_call_msg, tool_response_msg_1, tool_response_msg_2, ...]
+            # We want to capture the tool responses.
+            # The last message in follow_up_messages is NOT the final assistant response yet, it's the input to the final completion.
+            # So we can scan follow_up_messages for role='tool'
+            for msg in follow_up_messages:
+                if isinstance(msg, dict) and msg.get("role") == "tool":
+                     tool_call_records.append(msg)
 
         assistant_text = _strip_prefix(_text_from_content(assistant_message.content))
+        
+        # Remove accidental metadata strings from the generated text if they appear
+        assistant_text = assistant_text.replace("[User attached an image]", "").replace("[Assistant generated an image]", "").strip()
+
         assistant_images = []
         for image_data in tool_generated_images:
              data = image_data.get("data")
@@ -287,6 +331,8 @@ class openaiClient:
         reply_to_id = user_message.get("id")
         if reply_to_id == assistant_id:
             reply_to_id = None
+        
+        # This is the text message from the LLM (Telegram message #1)
         assistant_record = {
             "role": "assistant",
             "username": BOT_NAME,
@@ -297,7 +343,28 @@ class openaiClient:
             "tool_images_meta": assistant_metadata,
         }
 
-        updated_history = limited_previous + [user_message, assistant_record]
-        self._trim_and_save_messages(chat_key, updated_history)
+        # Prepare history to save: User -> Tools (if any) -> Assistant Text -> Image Messages (if any)
+        history_to_save = limited_previous + [user_message]
+        
+        for tool_msg in tool_call_records:
+             history_to_save.append(tool_msg)
+             
+        history_to_save.append(assistant_record)
+        
+        # For each generated image, create a separate "image message" record in history
+        # This represents Telegram message #2 (the photo with caption)
+        for idx, image_meta in enumerate(assistant_metadata):
+            image_caption = image_meta.get("prompt", "").strip() or "Here is your image."
+            image_message_record = {
+                "role": "assistant",
+                "username": BOT_NAME,
+                "text": f"{image_caption} [Assistant generated an image]",
+                "id": f"{assistant_id}-image-{idx}",
+                "reply_to_id": reply_to_id,
+                "images": [],  # Don't store actual image data
+            }
+            history_to_save.append(image_message_record)
+        
+        self._trim_and_save_messages(chat_key, history_to_save)
 
         return assistant_record

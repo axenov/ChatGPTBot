@@ -289,7 +289,7 @@ class telegramClient:
 
             structured_message = _structured_user_message(message, user_message.replace("@" + BOT_NAME, ""))
 
-            if self.should_reply(message):
+            if self.should_reply(message) or structured_message.get("images"):
                 bot_message = openai_client.complete_chat(structured_message, chat_id, BOT_ID)
                 reply_text = bot_message.get("text", "").strip()
                 if bot_message.get("text"):
