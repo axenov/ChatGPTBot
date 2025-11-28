@@ -70,10 +70,6 @@ def _normalize_aspect_ratio(aspect_ratio: Optional[str]) -> Optional[str]:
 class openaiClient:
     def __init__(self, dynamoDB_client: dynamoDBClient) -> None:
         self.client = OpenAI(api_key=OPENAI_KEY)
-        if GEMINI_API_KEY:
-            genai.configure(api_key=GEMINI_API_KEY)
-        else:
-            print("GEMINI_API_KEY is not set; image generation tool calls will fail.")
         self.dynamoDB_client = dynamoDB_client
 
     def _chat_key(self, chat_id: int, bot_id: int) -> str:
@@ -142,11 +138,12 @@ class openaiClient:
         return "\n".join(lines)
 
     def _generate_image(self, prompt: str, aspect_ratio: Optional[str], display_prompt: Optional[str]) -> Optional[Dict[str, Any]]:
-        model = genai.GenerativeModel(GEMINI_IMAGE_MODEL)
         normalized_ratio = _normalize_aspect_ratio(aspect_ratio)
         try:
-            response = model.generate_content(
-                [prompt],
+            client = genai.Client(api_key=GEMINI_API_KEY)
+            response = client.models.generate_content(
+                model=GEMINI_IMAGE_MODEL,
+                contents=[prompt],
                 config=types.GenerateContentConfig(
                     image_config=types.ImageConfig(
                         aspect_ratio=normalized_ratio,
@@ -156,19 +153,20 @@ class openaiClient:
         except Exception as exc:
             print(f"Gemini generation failed: {exc}")
             return None
-        if not response or not response.candidates:
+        if not response:
             return None
-        candidate = response.candidates[0]
-        if not candidate.content or not candidate.content.parts:
-            return None
-        for part in candidate.content.parts:
-            if hasattr(part, "inline_data") and part.inline_data and getattr(part.inline_data, "data", None):
-                return {
-                    "data": part.inline_data.data,
-                    "mime_type": part.inline_data.mime_type or IMAGE_MIME_TYPE,
-                    "prompt": prompt,
-                    "display_prompt": display_prompt or prompt,
-                }
+        
+        # https://ai.google.dev/gemini-api/docs/image-generation#python_23
+        if hasattr(response, "parts"):
+            for part in response.parts:
+                if part.inline_data:
+                    return {
+                        "data": part.inline_data.data,
+                        "mime_type": part.inline_data.mime_type or IMAGE_MIME_TYPE,
+                        "prompt": prompt,
+                        "display_prompt": display_prompt or prompt,
+                    }
+
         return None
 
     def _handle_tool_calls(self, tool_calls, conversation_messages: List[Dict[str, Any]], base_messages):
