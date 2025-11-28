@@ -328,7 +328,7 @@ class openaiClient:
         limited_previous = self._filter_valid_tool_messages(limited_previous)
         
         formatted_history = [self._format_message_for_model(m) for m in limited_previous]
-        tool_instruction = "TOOL USAGE INSTRUCTIONS: If the user asks to create, draw or render an image or a picture in any language, always call the `generate_image` tool and do not describe the JSON yourself or answer with some text. Otherwise return concise, human-friendly answers without technical prefixes. "
+        tool_instruction = "TOOL USAGE INSTRUCTIONS: If any member of the chat asks to create, draw or render an image or a picture in any language, always call the `generate_image` tool and do not describe the JSON yourself or answer with some text. Otherwise return concise, human-friendly answers without technical prefixes. "
         model_messages = [
             {"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]},
             {"role": "system", "content": [{"type": "text", "text": tool_instruction}]},
